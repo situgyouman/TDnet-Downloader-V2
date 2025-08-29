@@ -1,0 +1,33 @@
+name: TDnet Daily Downloader
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '31 6 * * 1-5' # 平日 15:31 JST
+    - cron: '1 9 * * 1-5'  # 平日 18:01 JST
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run downloader script
+        run: python downloader_auto.py
+
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update downloaded files"
+          file_pattern: "**/*.pdf"
