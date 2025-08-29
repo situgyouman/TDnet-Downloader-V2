@@ -78,4 +78,46 @@ def download_files(pdf_links, target_date):
         print("\nダウンロード対象のPDFが見つかりませんでした。")
         return
     save_dir = target_date.strftime('%y%m%d')
-    print(f"\n合計 {len(pdf_links)}件のファイルを
+    print(f"\n合計 {len(pdf_links)}件のファイルをフォルダ '{save_dir}' にダウンロードします。")
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        print(f"保存フォルダ '{save_dir}' を作成しました。")
+    
+    successful_downloads = 0
+    for i, item in enumerate(pdf_links):
+        try:
+            safe_name = item['name'][:50]
+            safe_title = item['title'][:80]
+            filename_base = f"{item['date']}{item['time']}_{item['code']}_{safe_name}_{safe_title}"
+            filename = sanitize_filename(filename_base) + ".pdf"
+            save_path = os.path.join(save_dir, filename)
+            
+            print(f"[{i+1}/{len(pdf_links)}] DL: {filename}")
+
+            if not os.path.exists(save_path):
+                pdf_response = requests.get(item['url'], headers=HEADERS, timeout=30)
+                pdf_response.raise_for_status()
+                with open(save_path, 'wb') as f:
+                    f.write(pdf_response.content)
+                successful_downloads += 1
+                time.sleep(0.5)
+            else:
+                print(f"  -> スキップ (既存ファイル)")
+                successful_downloads += 1
+        except Exception as e:
+            print(f"  -> 失敗（スキップ）: {item['name']} - {item['title']} ({e})")
+            continue
+    
+    print(f"\n処理が完了しました。{successful_downloads}件のファイルが正常に処理されました。")
+
+def main():
+    """メイン処理（自動実行用）"""
+    print("TDnet Downloader (自動実行モード) を起動します。")
+    JST = timezone(timedelta(hours=+9), 'JST')
+    target_date = datetime.now(JST)
+    print(f"本日 ({target_date.strftime('%Y年%m月%d日')}) のデータを取得します。")
+    links = get_disclosure_links(target_date)
+    download_files(links, target_date)
+
+if __name__ == "__main__":
+    main()
